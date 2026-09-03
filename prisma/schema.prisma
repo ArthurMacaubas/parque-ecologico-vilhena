@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COLABORADOR
+}
+
+/// Usuários autenticados via SUAP (IFRO). Criado/atualizado automaticamente
+/// no primeiro login — não há cadastro de senha local.
+model User {
+  id         String   @id @default(cuid())
+  matricula  String   @unique
+  nome       String
+  email      String?
+  role       Role     @default(COLABORADOR)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  points Point[]
+  trails Trail[]
+}
+
+model Category {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  color  String  @default("#2a9d8f")
+  icon   String  @default("map-pin")
+
+  points Point[]
+  trails Trail[]
+}
+
+/// Ponto de interesse marcado no mapa (Fase 2+).
+model Point {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  lat         Float
+  lng         Float
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  photos Photo[]
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+/// Foto associada a um ponto, armazenada em disco (Fase 4).
+model Photo {
+  id       String @id @default(cuid())
+  url      String
+  filename String
+
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+/// Trilha ou área desenhada no mapa como GeoJSON (LineString ou Polygon) (Fase 5).
+model Trail {
+  id          String @id @default(cuid())
+  name        String
+  description String?
+
+  /// Feature GeoJSON completa (geometry + properties), validada na API.
+  geojson Json
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}

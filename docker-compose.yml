@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: parque-ecologico-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: parque
+      POSTGRES_PASSWORD: parque
+      POSTGRES_DB: parque_ecologico
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parque -d parque_ecologico"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

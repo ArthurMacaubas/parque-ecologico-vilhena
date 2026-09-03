@@ -1,0 +1,53 @@
+# Compose para deploy no Coolify (tipo de recurso "Docker Compose").
+# Diferente do docker-compose.yml (uso local, só o banco), este arquivo
+# sobe a aplicação inteira: build da imagem via Dockerfile + Postgres/PostGIS.
+#
+# Depois de importar este arquivo no Coolify:
+# 1. Vá em "Environment Variables" e preencha as marcadas como obrigatórias
+#    (aparecem com borda vermelha se vazias).
+# 2. Vá na aba do serviço "app" > Domains e defina o domínio público,
+#    incluindo a porta do container: http://SEU-DOMINIO:3000 (ou https://).
+# 3. Faça NEXTAUTH_URL apontar para esse MESMO domínio (com https://, sem
+#    a porta — o Coolify expõe na 443 por fora mesmo o container ouvindo
+#    na 3000).
+# 4. O serviço "db" não recebe domínio/porta pública — fica só na rede
+#    interna, acessível pelo "app" como host "db".
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://parque:${DB_PASSWORD:?}@db:5432/parque_ecologico
+      - AUTH_SECRET=${AUTH_SECRET:?}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:?}
+      - SUAP_BASE_URL=${SUAP_BASE_URL:-https://suap.ifro.edu.br}
+      - SUAP_CLIENT_ID=${SUAP_CLIENT_ID:?}
+      - SUAP_CLIENT_SECRET=${SUAP_CLIENT_SECRET:?}
+      - SUAP_ADMIN_MATRICULAS=${SUAP_ADMIN_MATRICULAS:?}
+    volumes:
+      - uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      - POSTGRES_USER=parque
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?}
+      - POSTGRES_DB=parque_ecologico
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parque -d parque_ecologico"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
