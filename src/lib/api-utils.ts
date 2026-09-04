@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -13,14 +14,18 @@ export function isFiniteNumber(value: unknown): value is number {
 }
 
 /** Validação mínima de uma Feature GeoJSON (LineString ou Polygon). */
-export function isValidTrailGeoJSON(value: unknown): value is {
+type TrailGeoJSONInput = {
   type: "Feature";
   geometry: {
     type: "LineString" | "Polygon";
-    coordinates: unknown;
+    coordinates: Prisma.InputJsonValue;
   };
-  properties?: Record<string, unknown>;
-} {
+  properties?: Prisma.InputJsonObject;
+};
+
+export function isValidTrailGeoJSON(
+  value: unknown,
+): value is TrailGeoJSONInput {
   if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
   if (obj.type !== "Feature") return false;
